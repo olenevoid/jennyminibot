@@ -1,0 +1,4 @@
+md2tgmd==0.3.10
+Pillow==11.1.0
+python-dotenv==1.1.0
+python-telegram-bot==22.0
