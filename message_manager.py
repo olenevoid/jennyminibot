@@ -5,6 +5,8 @@ import log
 from settings import BOT_USERNAME
 from gemini import get_chat, add_new_chat
 from PIL import Image
+from PIL.ImageFile import ImageFile
+from io import BytesIO
 
 
 async def process_message(update: Update, bot,  parse_mode: str = None,
@@ -33,20 +35,42 @@ async def process_message(update: Update, bot,  parse_mode: str = None,
         return
 
 
-async def send_reply(update: Update, text: str, parse_mode: str = 'MarkdownV2',
+async def send_text_reply(update: Update, text: str, parse_mode: str = 'MarkdownV2',
                      reply_markup: InlineKeyboardMarkup | ReplyKeyboardMarkup |
                                    ReplyKeyboardRemove | ForceReply | None = None):    
     try:
         await update.message.reply_text(text, parse_mode=parse_mode, reply_markup=reply_markup)
         log.info(f'User "{update.message.from_user.username}" in chat "{update.message.chat_id}" received a reply')
-        
+
+    except telegram.error as e:
+        log.error(f'Telegram error: {e}')
+
+
+async def send_image_reply(update: Update, data: dict[str | ImageFile], parse_mode: str = 'MarkdownV2',
+                     reply_markup: InlineKeyboardMarkup | ReplyKeyboardMarkup |
+                                   ReplyKeyboardRemove | ForceReply | None = None):    
+    try:
+        image: ImageFile = data['image']
+        bio = BytesIO()
+        bio.name = "image"
+        image.save(bio, 'PNG')
+        bio.seek(0)
+
+        await update.message.reply_photo(
+            caption=data['text'],
+            photo=bio,
+            parse_mode=parse_mode,
+            reply_markup=reply_markup
+            )
+        log.info(f'User "{update.message.from_user.username}" in chat "{update.message.chat_id}" received a reply')
+
     except telegram.error as e:
         log.error(f'Telegram error: {e}')
 
 
 async def _process_reply(update, bot, text, reply_username, parse_mode: str):
     chat_type = update.message.chat.type
-    
+
     if (BOT_USERNAME in reply_username) or (BOT_USERNAME in text) or (chat_type == telegram.Chat.PRIVATE) :
         has_reply = True
         if BOT_USERNAME in reply_username:
@@ -58,20 +82,22 @@ async def _process_reply(update, bot, text, reply_username, parse_mode: str):
 
 async def _send_response_from_ai(update: Update, data: list, parse_mode: str):
     chat_id: str = str(update.message.chat_id)
-    response: str = await _get_bot_response(data, chat_id)
-    
-    await send_reply(update, response, parse_mode=parse_mode)    
-    
+    response: dict[str | ImageFile] = await _get_bot_response(data, chat_id)
+    if response['image']:
+        await send_image_reply(update, response, parse_mode=parse_mode)
+    else:
+        await send_text_reply(update, response['text'], parse_mode=parse_mode)
+
 
 async def _get_data_list(bot, message: Message, has_reply: bool):
-    data: list = []    
+    data: list = []
     await _get_message_attachments(bot, message, data)
     if has_reply:
         await _get_message_attachments(bot, message.reply_to_message, data)
     return data
 
 
-#Right now it works only with a single image
+# Right now it works only with a single image
 async def _get_message_attachments(bot, message: Message, data: list):
     if message.text is not None:
         new_text: str = _remove_botname_if_exists(message.text)
@@ -95,9 +121,8 @@ def _remove_botname_if_exists(text: str):
     return text
 
 
-async def _get_bot_response(data: list|str, chat_id: str):
+async def _get_bot_response(data: list | str, chat_id: str):
     chat = get_chat(chat_id)
     if chat is None:
         chat = add_new_chat(chat_id)
     return await chat.send_message(data)
-        
