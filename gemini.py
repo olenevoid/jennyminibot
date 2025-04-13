@@ -88,9 +88,9 @@ class Chat:
         )
 
     async def send_message(self, data: list | str):
-        response = await self.chat.send_message(data)        
+        response = await self.chat.send_message(data)
         self.save()
-        return get_response_dict(response)['text']
+        return get_response_dict(response)
 
     def save(self):
         history_entry = HistoryEntry(self.chat_id, self.chat.get_history())
