@@ -97,7 +97,11 @@ class Chat:
         history_entry.save()
 
     def reset(self):
-        self.chat = client.aio.chats.create(history=[])
+        self.chat = client.aio.chats.create(
+            model=AI_MODEL,
+            history=[],
+            config=get_generate_content_config()
+            )
 
 
 def get_chat(chat_id: str) -> Chat | None:
