@@ -1,6 +1,7 @@
 import io
 import telegram
-from telegram import InlineKeyboardMarkup, Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply, File, Message
+from telegram import (InlineKeyboardMarkup, Update, ReplyKeyboardMarkup,
+                      ReplyKeyboardRemove, ForceReply, File, Message)
 import log
 from settings import BOT_USERNAME
 from gemini import get_chat, add_new_chat
@@ -9,46 +10,61 @@ from PIL.ImageFile import ImageFile
 from io import BytesIO
 
 
-async def process_message(update: Update, bot,  parse_mode: str = None,
-                     reply_markup: InlineKeyboardMarkup | ReplyKeyboardMarkup |
-                                   ReplyKeyboardRemove | ForceReply | None = None):
-    text: str = update.message.text    
-    chat_type: str = update.message.chat.type    
+async def process_message(
+        update: Update,
+        bot,
+        parse_mode: str = None,
+        reply_markup: InlineKeyboardMarkup | ReplyKeyboardMarkup |
+        ReplyKeyboardRemove | ForceReply | None = None
+        ):
+    text: str = update.message.text
+    chat_type: str = update.message.chat.type
 
-    #Check if the message is a reply to another message
+    # Check if the message is a reply to another message
     if update.message.reply_to_message is not None:
-        reply_username = f'@{update.message.reply_to_message.from_user.username}'
+        reply_username = '@'+update.message.reply_to_message.from_user.username
         await _process_reply(update, bot, text, reply_username, parse_mode)
-    
-    else:
 
+    else:
         data: list = await _get_data_list(bot, update.message, False)
 
-        #If the message contains the bot name and it is a group chat the bot will reply
         if BOT_USERNAME in text and chat_type == telegram.Chat.GROUP:
-            await _send_response_from_ai(update, data, parse_mode)            
+            await _send_response_from_ai(update, data, parse_mode)
 
-        #If the chat is private the bot will reply
+        # If the chat is private the bot will reply
         elif chat_type == telegram.Chat.PRIVATE:
             await _send_response_from_ai(update, data, parse_mode)
-            
+
         return
 
 
-async def send_text_reply(update: Update, text: str, parse_mode: str = 'MarkdownV2',
-                     reply_markup: InlineKeyboardMarkup | ReplyKeyboardMarkup |
-                                   ReplyKeyboardRemove | ForceReply | None = None):    
+async def send_text_reply(
+        update: Update,
+        text: str,
+        parse_mode: str = 'MarkdownV2',
+        reply_markup: InlineKeyboardMarkup | ReplyKeyboardMarkup |
+        ReplyKeyboardRemove | ForceReply | None = None
+        ):
     try:
-        await update.message.reply_text(text, parse_mode=parse_mode, reply_markup=reply_markup)
-        log.info(f'User "{update.message.from_user.username}" in chat "{update.message.chat_id}" received a reply')
+        await update.message.reply_text(
+            text,
+            parse_mode=parse_mode,
+            reply_markup=reply_markup
+            )
+        log.info(f'''User "{update.message.from_user.username}"
+ in chat "{update.message.chat_id}" received a reply''')
 
     except telegram.error as e:
         log.error(f'Telegram error: {e}')
 
 
-async def send_image_reply(update: Update, data: dict[str | ImageFile], parse_mode: str = 'MarkdownV2',
-                     reply_markup: InlineKeyboardMarkup | ReplyKeyboardMarkup |
-                                   ReplyKeyboardRemove | ForceReply | None = None):    
+async def send_image_reply(
+        update: Update,
+        data: dict[str | ImageFile],
+        parse_mode: str = 'MarkdownV2',
+        reply_markup: InlineKeyboardMarkup | ReplyKeyboardMarkup |
+        ReplyKeyboardRemove | ForceReply | None = None
+        ):
     try:
         image: ImageFile = data['image']
         bio = BytesIO()
@@ -62,7 +78,8 @@ async def send_image_reply(update: Update, data: dict[str | ImageFile], parse_mo
             parse_mode=parse_mode,
             reply_markup=reply_markup
             )
-        log.info(f'User "{update.message.from_user.username}" in chat "{update.message.chat_id}" received a reply')
+        log.info(f'''User "{update.message.from_user.username}"
+ in chat "{update.message.chat_id}" received a reply''')
 
     except telegram.error as e:
         log.error(f'Telegram error: {e}')
@@ -71,7 +88,9 @@ async def send_image_reply(update: Update, data: dict[str | ImageFile], parse_mo
 async def _process_reply(update, bot, text, reply_username, parse_mode: str):
     chat_type = update.message.chat.type
 
-    if (BOT_USERNAME in reply_username) or (BOT_USERNAME in text) or (chat_type == telegram.Chat.PRIVATE) :
+    if ((BOT_USERNAME in reply_username)
+        or (BOT_USERNAME in text)
+            or (chat_type == telegram.Chat.PRIVATE)):
         has_reply = True
         if BOT_USERNAME in reply_username:
             has_reply = False

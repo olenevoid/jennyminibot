@@ -3,7 +3,10 @@ import logging
 log_filename = 'bot.log'
 info_level = logging.INFO
 log_format = '%(asctime)s %(levelname)s: %(name)s: %(message)s'
-handlers = [logging.FileHandler(log_filename, encoding='UTF-8'), logging.StreamHandler()]
+handlers = [
+    logging.FileHandler(log_filename, encoding='UTF-8'),
+    logging.StreamHandler()
+    ]
 logging.basicConfig(level=info_level, format=log_format, handlers=handlers)
 logging.getLogger('httpx').setLevel(logging.WARNING)
 
@@ -17,7 +20,8 @@ def error(message: str) -> None:
 
 
 def print_loggers():
-    loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
+    logger_dict = logging.root.manager.loggerDict
+    loggers = [logging.getLogger(name) for name in logger_dict]
     for log_name in loggers:
         print(log_name)
 
